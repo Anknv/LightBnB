@@ -92,21 +92,45 @@ exports.getAllReservations = getAllReservations;
  */
 
 
-const getAllProperties = function(options, limit = 10) {
-  const queryString = `
+ const getAllProperties = function (options, limit = 10) {
+  // 1
+  const queryParams = [];
+  // 2
+  let queryString = `
   SELECT properties.*, avg(property_reviews.rating) as average_rating
   FROM properties
   JOIN property_reviews ON properties.id = property_id
-  GROUP BY properties.id
-  LIMIT $1
   `;
 
-  const values = [limit];
+  // 3
+  const whereConditions = [];
+  if (options.city) {
+    queryParams.push(`%${options.city}%`);
+    whereConditions.push(`city LIKE $${queryParams.length}`);
+  }
 
-  return pool
-    .query(queryString, values)
-    .then((result) => result.rows)
-    .catch((err) => err.message);
+  if (options.owner_id) {
+    queryParams.push(options.owner_id);
+    whereConditions.push(`owner_id = $${queryParams.length}`);
+  }
+
+  const whereString = whereConditions.length ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+  queryString += whereString;
+
+  // 4
+  queryParams.push(limit);
+  queryString += `
+  GROUP BY properties.id
+  ORDER BY cost_per_night
+  LIMIT $${queryParams.length};
+  `;
+
+  // 5
+  console.log(queryString, queryParams);
+
+  // 6
+  return pool.query(queryString, queryParams).then((res) => res.rows);
 };
 
 exports.getAllProperties = getAllProperties;
