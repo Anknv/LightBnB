@@ -114,6 +114,22 @@ exports.getAllReservations = getAllReservations;
     whereConditions.push(`owner_id = $${queryParams.length}`);
   }
 
+  if (options.minimum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night * 100);
+    whereConditions.push(`cost_per_night >= $${queryParams.length}`);
+  }
+
+  if (options.maximum_price_per_night) {
+    queryParams.push(options.maximum_price_per_night * 100);
+    whereConditions.push(`cost_per_night <= $${queryParams.length}`);
+  }
+
+  let having = '';
+  if (options.minimum_rating) {
+    queryParams.push(options.minimum_rating);
+    having = `HAVING avg(property_reviews.rating) >= $${queryParams.length}`;
+  }
+
   const whereString = whereConditions.length ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
   queryString += whereString;
@@ -122,6 +138,7 @@ exports.getAllReservations = getAllReservations;
   queryParams.push(limit);
   queryString += `
   GROUP BY properties.id
+  ${having}
   ORDER BY cost_per_night
   LIMIT $${queryParams.length};
   `;
